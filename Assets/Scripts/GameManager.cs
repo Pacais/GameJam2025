@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using UnityEngine;
+using System;
 
 public class GameManager : MonoBehaviour
 {
@@ -32,6 +33,9 @@ public class GameManager : MonoBehaviour
 
     private List<Party> currentParties;
 
+    public event Action<List<Party>> OnNewRound;
+    public event Action<string> OnMessage;
+
     private void Start()
     {
         StartRound();
@@ -42,6 +46,8 @@ public class GameManager : MonoBehaviour
         Debug.Log("\n--- Ronda " + round + " ---");
         currentParties = GenerateParties();
 
+        OnNewRound?.Invoke(currentParties);
+
         for (int i = 0; i < currentParties.Count; i++)
         {
             var p = currentParties[i];
@@ -49,36 +55,30 @@ public class GameManager : MonoBehaviour
                       (p.isRest ? " (descanso)" : "") +
                       " - " + p.template.description);
         }
-
-        Debug.Log("Elige una party con el número del 0 al 3 en consola (simulación).");
-        SimulateChoice(Random.Range(0, 4));
     }
 
     List<Party> GenerateParties()
     {
         List<Party> parties = new List<Party>();
 
-        // Filtrar plantillas posibles como adecuadas
         List<PartyTemplate> adequateCandidates = allTemplates.FindAll(t => t.canBeAdequate);
-        PartyTemplate adequateTemplate = adequateCandidates[Random.Range(0, adequateCandidates.Count)];
+        PartyTemplate adequateTemplate = adequateCandidates[UnityEngine.Random.Range(0, adequateCandidates.Count)];
 
         Party adequate = new Party { template = adequateTemplate, isAdequate = true };
         parties.Add(adequate);
 
-        // Añadir dos aleatorias no adecuadas
         List<PartyTemplate> incorrectTemplates = new List<PartyTemplate>(allTemplates);
         incorrectTemplates.Remove(adequateTemplate);
 
         while (parties.Count < 3 && incorrectTemplates.Count > 0)
         {
-            PartyTemplate pt = incorrectTemplates[Random.Range(0, incorrectTemplates.Count)];
+            PartyTemplate pt = incorrectTemplates[UnityEngine.Random.Range(0, incorrectTemplates.Count)];
             incorrectTemplates.Remove(pt);
 
             Party p = new Party { template = pt };
             parties.Add(p);
         }
 
-        // Party de descanso
         Party rest = new Party
         {
             template = new PartyTemplate { name = "Tomarte un Respiro", description = "Un momento de calma para reflexionar.", antifragilityGain = 0, stressImpact = -1 },
@@ -86,11 +86,10 @@ public class GameManager : MonoBehaviour
         };
         parties.Add(rest);
 
-        // Mezclar lista
         for (int i = 0; i < parties.Count; i++)
         {
             var tmp = parties[i];
-            int r = Random.Range(i, parties.Count);
+            int r = UnityEngine.Random.Range(i, parties.Count);
             parties[i] = parties[r];
             parties[r] = tmp;
         }
@@ -98,7 +97,7 @@ public class GameManager : MonoBehaviour
         return parties;
     }
 
-    void SimulateChoice(int index)
+    public void MakeChoice(int index)
     {
         Party chosen = currentParties[index];
 
@@ -125,7 +124,7 @@ public class GameManager : MonoBehaviour
 
         if (stress >= maxStress)
         {
-            Debug.Log("\n💀 GAME OVER: Tu estrés te ha superado.");
+            Debug.Log("\n\uD83D\uDC80 GAME OVER: Tu estrés te ha superado.");
         }
         else
         {
